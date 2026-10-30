@@ -150,6 +150,9 @@ pub enum C2paSigningAlg {
     Ps384,
     Ps512,
     Ed25519,
+    MlDsa44,
+    MlDsa65,
+    MlDsa87,
 }
 
 impl From<C2paSigningAlg> for SigningAlg {
@@ -162,6 +165,9 @@ impl From<C2paSigningAlg> for SigningAlg {
             C2paSigningAlg::Ps384 => SigningAlg::Ps384,
             C2paSigningAlg::Ps512 => SigningAlg::Ps512,
             C2paSigningAlg::Ed25519 => SigningAlg::Ed25519,
+            C2paSigningAlg::MlDsa44 => SigningAlg::MlDsa44,
+            C2paSigningAlg::MlDsa65 => SigningAlg::MlDsa65,
+            C2paSigningAlg::MlDsa87 => SigningAlg::MlDsa87,
         }
     }
 }
