@@ -200,7 +200,10 @@ pub fn check_certificate_profile(
         || *cert_alg == ECDSA_WITH_SHA384_OID
         || *cert_alg == ECDSA_WITH_SHA512_OID
         || *cert_alg == RSASSA_PSS_OID
-        || *cert_alg == ED25519_OID)
+        || *cert_alg == ED25519_OID
+        || *cert_alg == ML_DSA_44_OID
+        || *cert_alg == ML_DSA_65_OID
+        || *cert_alg == ML_DSA_87_OID)
     {
         log_item!(
             "",
@@ -222,6 +225,20 @@ pub fn check_certificate_profile(
         log_item!(
             "",
             "certificate Ed25519 signature algorithm parameters must be absent",
+            "check_certificate_profile"
+        )
+        .validation_status(SIGNING_CREDENTIAL_INVALID)
+        .failure_no_throw(validation_log, CertificateProfileError::InvalidCertificate);
+
+        return Err(CertificateProfileError::InvalidCertificate);
+    }
+
+    // https://www.rfc-editor.org/rfc/rfc9881#section-2
+    // ML-DSA spec: "The contents of the parameters component for each algorithm MUST be absent."
+    if is_ml_dsa_oid(cert_alg) && signcert.signature_algorithm.parameters.is_some() {
+        log_item!(
+            "",
+            "certificate ML-DSA signature algorithm parameters must be absent",
             "check_certificate_profile"
         )
         .validation_status(SIGNING_CREDENTIAL_INVALID)
@@ -352,6 +369,19 @@ pub fn check_certificate_profile(
         log_item!(
             "",
             "certificate Ed25519 public key parameters must be absent",
+            "check_certificate_profile"
+        )
+        .validation_status(SIGNING_CREDENTIAL_INVALID)
+        .failure_no_throw(validation_log, CertificateProfileError::InvalidCertificate);
+
+        return Err(CertificateProfileError::InvalidCertificate);
+    }
+
+    // https://www.rfc-editor.org/rfc/rfc9881#section-2
+    if is_ml_dsa_oid(&skpi_alg.algorithm) && skpi_alg.parameters.is_some() {
+        log_item!(
+            "",
+            "certificate ML-DSA public key parameters must be absent",
             "check_certificate_profile"
         )
         .validation_status(SIGNING_CREDENTIAL_INVALID)
@@ -622,6 +652,9 @@ pub enum CertificateProfileError {
 const RSA_OID: Oid<'static> = oid!(1.2.840 .113549 .1 .1 .1);
 const EC_PUBLICKEY_OID: Oid<'static> = oid!(1.2.840 .10045 .2 .1);
 const RSASSA_PSS_OID: Oid<'static> = oid!(1.2.840 .113549 .1 .1 .10);
+const ML_DSA_44_OID: Oid<'static> = oid!(2.16.840 .1 .101 .3 .4 .3 .17);
+const ML_DSA_65_OID: Oid<'static> = oid!(2.16.840 .1 .101 .3 .4 .3 .18);
+const ML_DSA_87_OID: Oid<'static> = oid!(2.16.840 .1 .101 .3 .4 .3 .19);
 
 const ECDSA_WITH_SHA256_OID: Oid<'static> = oid!(1.2.840 .10045 .4 .3 .2);
 const ECDSA_WITH_SHA384_OID: Oid<'static> = oid!(1.2.840 .10045 .4 .3 .3);
@@ -644,6 +677,10 @@ fn is_valid_rsa_public_exponent(exponent: &BigInt) -> bool {
             .to_u32_digits()
             .first()
             .is_some_and(|least_significant| least_significant % 2 == 1)
+}
+
+fn is_ml_dsa_oid(oid: &Oid) -> bool {
+    *oid == ML_DSA_44_OID || *oid == ML_DSA_65_OID || *oid == ML_DSA_87_OID
 }
 
 #[cfg(test)]
@@ -726,11 +763,23 @@ mod tests {
         let ps256_cert = x509_der_from_pem(include_bytes!(
             "../../../tests/fixtures/crypto/raw_signature/ps256.pub"
         ));
+        let mldsa44_cert = x509_der_from_pem(include_bytes!(
+         "../../../tests/fixtures/certs/mldsa44.pub"
+        ));
+        let mldsa65_cert = x509_der_from_pem(include_bytes!(
+         "../../../tests/fixtures/certs/mldsa65.pub"
+        ));
+        let mldsa87_cert = x509_der_from_pem(include_bytes!(
+         "../../../tests/fixtures/certs/mldsa87.pub"
+        ));
 
         check_end_entity_certificate_profile(&es256_cert, &ctp, &mut validation_log, None).unwrap();
         check_end_entity_certificate_profile(&es384_cert, &ctp, &mut validation_log, None).unwrap();
         check_end_entity_certificate_profile(&es512_cert, &ctp, &mut validation_log, None).unwrap();
         check_end_entity_certificate_profile(&ps256_cert, &ctp, &mut validation_log, None).unwrap();
+        check_end_entity_certificate_profile(&mldsa44_cert, &ctp, &mut validation_log, None).unwrap();
+        check_end_entity_certificate_profile(&mldsa65_cert, &ctp, &mut validation_log, None).unwrap();
+        check_end_entity_certificate_profile(&mldsa87_cert, &ctp, &mut validation_log, None).unwrap();
     }
 
     // https://datatracker.ietf.org/doc/html/rfc8410#section-3
@@ -785,6 +834,72 @@ mod tests {
             "certificate Ed25519 signature algorithm parameters must be absent",
         );
     }
+
+    // https://www.rfc-editor.org/rfc/rfc9881#section-2
+    // ML-DSA spec: "The contents of the parameters component for each algorithm MUST be absent."
+    #[test]
+    #[cfg_attr(
+        all(target_arch = "wasm32", not(target_os = "wasi")),
+        wasm_bindgen_test
+    )]
+    fn ml_dsa_algorithm_parameters_must_be_absent() {
+        let der_null = Any::new(vec![0x05, 0x00]);
+        let ctp = CertificateTrustPolicy::default();
+
+        let assert_rejected = |cert: &Certificate, expected_description: &str| {
+            let der = rasn::der::encode(cert).unwrap();
+            let mut validation_log = StatusTracker::default();
+            assert!(
+                check_end_entity_certificate_profile(&der, &ctp, &mut validation_log, None)
+                    .is_err()
+            );
+            let item = &validation_log.logged_items()[0];
+            assert_eq!(
+                item.validation_status,
+                Some(SIGNING_CREDENTIAL_INVALID.into())
+            );
+            assert_eq!(item.description, expected_description);
+        };
+
+        let ee_ders = [
+            x509_der_from_pem(include_bytes!(
+                "../../../tests/fixtures/crypto/raw_signature/mldsa44.pub"
+            )),
+            x509_der_from_pem(include_bytes!(
+                "../../../tests/fixtures/crypto/raw_signature/mldsa65.pub"
+            )),
+            x509_der_from_pem(include_bytes!(
+                "../../../tests/fixtures/crypto/raw_signature/mldsa87.pub"
+            )),
+        ];
+
+        for ee_der in ee_ders {
+            let mut validation_log = StatusTracker::default();
+            check_end_entity_certificate_profile(&ee_der, &ctp, &mut validation_log, None)
+                .unwrap();
+
+            // Parameters in the subject public key info algorithm.
+            let mut cert: Certificate = rasn::der::decode(&ee_der).unwrap();
+            cert.tbs_certificate
+                .subject_public_key_info
+                .algorithm
+                .parameters = Some(der_null.clone());
+            assert_rejected(
+                &cert,
+                "certificate ML-DSA public key parameters must be absent",
+            );
+
+            // Parameters in both the outer and the signed (tbsCertificate) signature algorithm.
+            let mut cert: Certificate = rasn::der::decode(&ee_der).unwrap();
+            cert.signature_algorithm.parameters = Some(der_null.clone());
+            cert.tbs_certificate.signature.parameters = Some(der_null.clone());
+            assert_rejected(
+                &cert,
+                "certificate ML-DSA signature algorithm parameters must be absent",
+            );
+        }
+    }
+
 
     // https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.3
     #[test]

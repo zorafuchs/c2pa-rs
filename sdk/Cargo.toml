@@ -110,7 +110,8 @@ byteorder = { version = "1.5.0", default-features = false }
 byteordered = "0.6.0"
 chrono = { version = "0.4.44", default-features = false, features = ["serde"] }
 c2pa_cbor = "0.78.0"
-c2pa_raw_crypto = { version = "0.1.2", default-features = false }
+# c2pa_raw_crypto = { version = "0.1.2", default-features = false }
+c2pa_raw_crypto = { git = "https://github.com/zorafuchs/c2pa-raw-crypto", tag = "v0.1.2-mldsa.2.4", default-features = false }
 const-hex = "1.19"
 coset = "0.4.2"
 der = { version = "0.8.1", features = ["alloc", "std", "oid"] }
