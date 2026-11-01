@@ -87,6 +87,9 @@ pub fn signing_alg_from_sign1(sign1: &coset::CoseSign1) -> Result<SigningAlg, Co
             Algorithm::ES384 => Ok(SigningAlg::Es384),
             Algorithm::ES256 => Ok(SigningAlg::Es256),
             Algorithm::EdDSA => Ok(SigningAlg::Ed25519),
+            Algorithm::ML_DSA_44 => Ok(SigningAlg::MlDsa44),
+            Algorithm::ML_DSA_65 => Ok(SigningAlg::MlDsa65),
+            Algorithm::ML_DSA_87 => Ok(SigningAlg::MlDsa87),
             _ => Err(CoseError::UnsupportedSigningAlgorithm),
         },
 
