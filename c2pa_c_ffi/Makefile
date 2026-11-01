@@ -19,6 +19,8 @@ TARGET_DIR ?= ../target
 
 CARGO_BUILD_FLAGS_EMSCRIPTEN = --release -p c2pa-c-ffi --no-default-features --features "rust_native_crypto,file_io"
 CARGO_BUILD_FLAGS = --release -p c2pa-c-ffi --no-default-features --features "rust_native_crypto, add_thumbnails, http, file_io"
+# ML-DSA is only implemented in the OpenSSL backend, so the Android builds use OpenSSL.
+CARGO_BUILD_FLAGS_ANDROID = --release -p c2pa-c-ffi --no-default-features --features "c2pa/openssl, add_thumbnails, http, file_io"
 
 IPHONEOS_DEPLOYMENT_TARGET ?= 15.0
 
@@ -179,25 +181,25 @@ release-ios-x86_64-macabi:
 # 64-bit Android devices
 release-android-arm64:
 	$(CROSS_INSTALL_RUSTFLAGS) cargo install cross --git https://github.com/cross-rs/cross
-	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=aarch64-linux-android $(CARGO_BUILD_FLAGS)
+	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=aarch64-linux-android $(CARGO_BUILD_FLAGS_ANDROID)
 	@$(call make_zip,$(TARGET_DIR)/aarch64-linux-android/release,aarch64-linux-android)
 
 # 32-bit Android devices
 release-android-armv7:
 	$(CROSS_INSTALL_RUSTFLAGS) cargo install cross --git https://github.com/cross-rs/cross
-	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=armv7-linux-androideabi $(CARGO_BUILD_FLAGS)
+	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=armv7-linux-androideabi $(CARGO_BUILD_FLAGS_ANDROID)
 	@$(call make_zip,$(TARGET_DIR)/armv7-linux-androideabi/release,armv7-linux-androideabi)
 
 # 32-bit x86 Android emulators
 release-android-x86:
 	$(CROSS_INSTALL_RUSTFLAGS) cargo install cross --git https://github.com/cross-rs/cross
-	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=i686-linux-android $(CARGO_BUILD_FLAGS)
+	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=i686-linux-android $(CARGO_BUILD_FLAGS_ANDROID)
 	@$(call make_zip,$(TARGET_DIR)/i686-linux-android/release,i686-linux-android)
 
 # 64-bit x86 Android emulators
 release-android-x86_64:
 	$(CROSS_INSTALL_RUSTFLAGS) cargo install cross --git https://github.com/cross-rs/cross
-	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=x86_64-linux-android $(CARGO_BUILD_FLAGS)
+	RUSTFLAGS="$${RUSTFLAGS} $(ANDROID_LINKER_FLAGS)" cross build --target=x86_64-linux-android $(CARGO_BUILD_FLAGS_ANDROID)
 	@$(call make_zip,$(TARGET_DIR)/x86_64-linux-android/release,x86_64-linux-android)
 
 release-emscripten:

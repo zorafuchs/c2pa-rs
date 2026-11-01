@@ -393,6 +393,9 @@ fn build_protected_header(
         SigningAlg::Es384 => HeaderBuilder::new().algorithm(iana::Algorithm::ES384),
         SigningAlg::Es512 => HeaderBuilder::new().algorithm(iana::Algorithm::ES512),
         SigningAlg::Ed25519 => HeaderBuilder::new().algorithm(iana::Algorithm::EdDSA),
+        SigningAlg::MlDsa44 => HeaderBuilder::new().algorithm(iana::Algorithm::ML_DSA_44),
+        SigningAlg::MlDsa65 => HeaderBuilder::new().algorithm(iana::Algorithm::ML_DSA_65),
+        SigningAlg::MlDsa87 => HeaderBuilder::new().algorithm(iana::Algorithm::ML_DSA_87),
         _ => return Err(CoseError::UnsupportedSigningAlgorithm),
     };
 

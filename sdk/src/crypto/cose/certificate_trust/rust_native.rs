@@ -227,6 +227,9 @@ fn signing_alg_to_sig_and_hash_oid(alg: &str) -> Option<(bcder::Oid, bcder::Oid)
         "ps384" => pair(&RSA_PSS_OID, &SHA384_OID),
         "ps512" => pair(&RSA_PSS_OID, &SHA512_OID),
         "ed25519" => pair(&ED25519_OID, &SHA512_OID),
+        "mldsa44" => pair(&ML_DSA_44_OID, &SHA512_OID),
+        "mldsa65" => pair(&ML_DSA_65_OID, &SHA512_OID),
+        "mldsa87" => pair(&ML_DSA_87_OID, &SHA512_OID),
         _ => None,
     }
 }
@@ -250,6 +253,12 @@ fn cert_signing_alg(cert: &X509Certificate) -> Option<String> {
         signing_alg_from_rsapss_alg(&cert.signature_algorithm)
     } else if cert_alg == ED25519_OID.as_bytes() {
         Some(SigningAlg::Ed25519.to_string())
+    } else if cert_alg == ML_DSA_44_OID.as_bytes() {
+        Some(SigningAlg::MlDsa44.to_string())
+    } else if cert_alg == ML_DSA_65_OID.as_bytes() {
+        Some(SigningAlg::MlDsa65.to_string())
+    } else if cert_alg == ML_DSA_87_OID.as_bytes() {
+        Some(SigningAlg::MlDsa87.to_string())
     } else {
         None
     }
