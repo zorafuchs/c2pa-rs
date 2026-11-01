@@ -69,6 +69,9 @@ const ED25519_OID: Oid<'static> = oid!(1.3.101 .112);
 const PRIME256V1_OID: Oid<'static> = oid!(1.2.840 .10045 .3 .1 .7);
 const SECP384R1_OID: Oid<'static> = oid!(1.3.132 .0 .34);
 const SECP521R1_OID: Oid<'static> = oid!(1.3.132 .0 .35);
+const ML_DSA_44_OID: Oid<'static> = oid!(2.16.840 .1 .101 .3 .4 .3 .17);
+const ML_DSA_65_OID: Oid<'static> = oid!(2.16.840 .1 .101 .3 .4 .3 .18);
+const ML_DSA_87_OID: Oid<'static> = oid!(2.16.840 .1 .101 .3 .4 .3 .19);
 
 // Does the certificate's key match the algorithm -- and, for EC, the curve --
 // implied by the COSE `SigningAlg` (RFC 8152: Es256/384/512 are P-256/384/521)?
@@ -92,6 +95,9 @@ fn spki_matches_signing_alg(alg: SigningAlg, spki: &AlgorithmIdentifier) -> bool
             *key_alg == RSA_OID || *key_alg == RSASSA_PSS_OID
         }
         SigningAlg::Ed25519 => *key_alg == ED25519_OID,
+        SigningAlg::MlDsa44 => *key_alg == ML_DSA_44_OID,
+        SigningAlg::MlDsa65 => *key_alg == ML_DSA_65_OID,
+        SigningAlg::MlDsa87 => *key_alg == ML_DSA_87_OID,
         _ => false,
     }
 }
@@ -400,6 +406,9 @@ mod tests {
     const PS384: &[u8] = include_bytes!("../../../tests/fixtures/crypto/raw_signature/ps384.pub");
     const ED25519: &[u8] = include_bytes!("../../../tests/fixtures/certs/ed25519.pub");
     const ED448: &[u8] = include_bytes!("../../../tests/fixtures/crypto/raw_signature/ed448.pub");
+    const MLDSA44: &[u8] = include_bytes!("../../../tests/fixtures/certs/mldsa44.pub");
+    const MLDSA65: &[u8] = include_bytes!("../../../tests/fixtures/certs/mldsa65.pub");
+    const MLDSA87: &[u8] = include_bytes!("../../../tests/fixtures/certs/mldsa87.pub");
 
     fn key_matches(cert_pem: &[u8], alg: SigningAlg) -> bool {
         let pem = Pem::iter_from_buffer(cert_pem).next().unwrap().unwrap();
@@ -415,6 +424,9 @@ mod tests {
         assert!(key_matches(ES512, SigningAlg::Es512));
         assert!(key_matches(PS256, SigningAlg::Ps256));
         assert!(key_matches(PS384, SigningAlg::Ps384));
+        assert!(key_matches(MLDSA44, SigningAlg::MlDsa44));
+        assert!(key_matches(MLDSA65, SigningAlg::MlDsa65));
+        assert!(key_matches(MLDSA87, SigningAlg::MlDsa87));
     }
 
     #[test]
@@ -436,5 +448,16 @@ mod tests {
         assert!(!key_matches(ES256, SigningAlg::Es512));
         assert!(!key_matches(ES384, SigningAlg::Es256));
         assert!(!key_matches(ES512, SigningAlg::Es256));
+    }
+
+    #[test]
+    fn wrong_ml_dsa_level_rejected() {
+        // Right key type (ML-DSA) but the wrong parameter set for the declared alg.
+        assert!(!key_matches(MLDSA44, SigningAlg::MlDsa65));
+        assert!(!key_matches(MLDSA65, SigningAlg::MlDsa87));
+        assert!(!key_matches(MLDSA87, SigningAlg::MlDsa44));
+        // ML-DSA vs classical in either direction.
+        assert!(!key_matches(MLDSA44, SigningAlg::Ed25519));
+        assert!(!key_matches(ED25519, SigningAlg::MlDsa44));
     }
 }
