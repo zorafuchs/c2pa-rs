@@ -50,6 +50,20 @@ pub struct CallbackSigner {
     pub tsa_url: Option<String>,
 }
 
+fn max_signature_size(alg: SigningAlg) -> usize {
+    match alg {
+        SigningAlg::Es256 | SigningAlg::Ed25519 => 64,
+        SigningAlg::Es384 => 96,
+        SigningAlg::Es512 => 132,
+        // RSA keys up to 4096 bits
+        SigningAlg::Ps256 | SigningAlg::Ps384 | SigningAlg::Ps512 => 512,
+        SigningAlg::MlDsa44 => 2420,
+        SigningAlg::MlDsa65 => 3309,
+        SigningAlg::MlDsa87 => 4627,
+        _ => 512,
+    }
+}
+
 unsafe impl Send for CallbackSigner {}
 unsafe impl Sync for CallbackSigner {}
 
@@ -61,7 +75,7 @@ impl CallbackSigner {
         T: Into<Vec<u8>>,
     {
         let certs = certs.into();
-        let reserve_size = 10000 + certs.len();
+        let reserve_size = max_signature_size(alg) + 10000 + certs.len();
 
         Self {
             context: std::ptr::null(),

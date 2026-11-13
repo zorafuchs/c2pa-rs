@@ -58,6 +58,13 @@ pub(crate) fn check_certificate_trust(
         // NO_CHECK_TIME, which disabled expiry checking for the whole chain,
         // including intermediates that have no other validity check anywhere.
         if let Some(st) = signing_time_epoch {
+            // time_t is only 32 bits on 32-bit Android (armv7, i686).
+            #[allow(clippy::unnecessary_fallible_conversions)]
+            let st = st.try_into().map_err(|_| {
+                CertificateTrustError::InternalError(format!(
+                 "signing time {st} does not fit into time_t on this platform"
+                ))
+            })?; 
             verify_param.set_time(st);
         }
 
